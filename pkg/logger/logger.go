@@ -65,6 +65,12 @@ func (l *DefaultLogger) Error(format string, args ...any) {
 
 func (l *DefaultLogger) log(level, color, format string, args ...any) {
 	timestamp := time.Now().Format("2006-01-02 15:04:05")
-	message := fmt.Sprintf(format, args...)
+	var message string
+	if len(args) > 0 {
+		message = fmt.Sprintf(format, args...)
+	} else {
+		message = format // handle literal string
+	}
+
 	fmt.Printf("%s[%s] %s: %s%s\n", color, timestamp, level, message, colorReset)
 }
