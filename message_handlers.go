@@ -8,7 +8,17 @@ func (b *Bot) OnMessage(handler handler) {
 	b.messageHandler = handler
 }
 
-func (ctx *Context) Reply(req *SendMessageRequest) error {
+func (ctx *Context) Reply(text string) error {
+	payload := map[string]interface{}{
+		"chat_id":               ctx.ChatID,
+		"text":                  text,
+		"reply_with_parameters": ctx.MessageId,
+	}
+
+	return ctx.makeRequest("sendMessage", payload)
+}
+
+func (ctx *Context) ReplyWithOpts(req *SendMessageRequest) error {
 	payload := map[string]interface{}{
 		"chat_id": ctx.ChatID,
 		"text":    req.Text,
@@ -20,6 +30,16 @@ func (ctx *Context) Reply(req *SendMessageRequest) error {
 
 	if req.ReplyMarkup != nil {
 		payload["reply_markup"] = req.ReplyMarkup
+	}
+
+	if req.ReplyParams != nil && req.ReplyParams.MessageId != 0 {
+		replyParam := map[string]interface{}{
+			"message_id": ctx.MessageId,
+		}
+		if req.ReplyParams.ChatId != 0 {
+			replyParam["chat_id"] = ctx.ChatID
+		}
+		payload["reply_parameters"] = replyParam
 	}
 
 	return ctx.makeRequest("sendMessage", payload)
