@@ -3,12 +3,13 @@ package tgx
 import "github.com/harshyadavone/tgx/models"
 
 type Context struct {
-	Text     string
-	UserID   int64
-	Username string
-	ChatID   int64
-	bot      *Bot
-	Args     []string
+	Text      string
+	UserID    int64
+	Username  string
+	ChatID    int64
+	MessageId int64
+	bot       *Bot
+	Args      []string
 }
 
 type CallbackContext struct {
