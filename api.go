@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -70,7 +73,7 @@ func makeAPIRequestWithResult(token, method string, params map[string]interface{
 	if err != nil {
 		return nil, &BotError{
 			Code:    http.StatusServiceUnavailable,
-			Message: "Failed to send request",
+			Message: "failed to read response body",
 			Err:     err,
 		}
 	}
@@ -125,6 +128,69 @@ func makeAPIRequestWithResult(token, method string, params map[string]interface{
 	}
 
 	return telegramResp.Result, nil
+}
+
+func makeMultipartReq(token, method string, params map[string]interface{}, paramName, path string) error {
+	url := fmt.Sprintf("https://api.telegram.org/bot%s/%s", token, method)
+
+	fmt.Println("FilePath: ", path)
+	fmt.Println("FileName: ", filepath.Base(path))
+	file, err := os.Open(path)
+	if err != nil {
+		return fmt.Errorf("failed to open file: %w", err)
+	}
+	defer file.Close()
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, err := writer.CreateFormFile(paramName, filepath.Base(path))
+	if err != nil {
+		return fmt.Errorf("failed to create form file: %w", err)
+	}
+
+	_, err = io.Copy(part, file)
+	if err != nil {
+		return fmt.Errorf("failed to write file to form: %w", err)
+	}
+
+	for key, val := range params {
+		strVal := fmt.Sprintf("%v", val)
+		err = writer.WriteField(key, strVal)
+		if err != nil {
+			return fmt.Errorf("failed to write form field %q: %w", key, err)
+		}
+	}
+
+	err = writer.Close()
+	if err != nil {
+		return fmt.Errorf("failed to close writer: %w", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, url, body)
+	if err != nil {
+		return fmt.Errorf("failed to create HTTP request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	fmt.Println(string(respBody))
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("unexpected response status: %d, body: %s", resp.StatusCode, string(respBody))
+	}
+
+	return nil
 }
 
 func IsAPIError(err error, errCode int) bool {
