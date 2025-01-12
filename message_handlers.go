@@ -4,8 +4,11 @@ import (
 	"github.com/harshyadavone/tgx/models"
 )
 
-func (b *Bot) OnMessage(handler handler) {
-	b.messageHandler = handler
+func (b *Bot) OnMessage(messageType string, handler Handler) {
+	if b.messageHandlers == nil {
+		b.messageHandlers = make(map[string]Handler)
+	}
+	b.messageHandlers[messageType] = handler
 }
 
 func (ctx *Context) Reply(text string) error {

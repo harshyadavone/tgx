@@ -4,12 +4,18 @@ import "github.com/harshyadavone/tgx/models"
 
 type Context struct {
 	Text      string
+	Photo     []*models.PhotoSize
+	Video     *models.Video
+	Voice     *models.Voice
+	Document  *models.Document
+	Sticker   *models.Sticker
+	Animation *models.Animation
+	Args      []string
 	UserID    int64
 	Username  string
-	ChatID    int64
 	MessageId int64
+	ChatID    int64
 	bot       *Bot
-	Args      []string
 }
 
 type CallbackContext struct {

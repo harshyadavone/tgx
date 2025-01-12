@@ -17,15 +17,15 @@ const (
 )
 
 type ErrorHandler func(ctx *Context, err error)
-type handler func(ctx *Context) error
+type Handler func(ctx *Context) error
 type callbackHandler func(ctx *CallbackContext) error
 
 type Bot struct {
 	token      string
 	webhookURL string
 
-	messageHandler   handler
-	commandHandler   map[string]handler
+	messageHandlers  map[string]Handler
+	commandHandler   map[string]Handler
 	callbackHandlers map[string]callbackHandler
 	errorHandler     ErrorHandler
 
@@ -48,7 +48,8 @@ func NewBot(token, webhookURL string, logger logger.Logger) *Bot {
 	return &Bot{
 		token:            token,
 		webhookURL:       webhookURL,
-		commandHandler:   make(map[string]handler),
+		messageHandlers:  make(map[string]Handler),
+		commandHandler:   make(map[string]Handler),
 		callbackHandlers: make(map[string]callbackHandler),
 		logger:           logger,
 		errorHandler:     defaultErrorHandler,
@@ -165,7 +166,7 @@ func (b *Bot) HandleWebhook(w http.ResponseWriter, r *http.Request) {
 
 func (b *Bot) handleMessageUpdate(message *models.Message) error {
 
-	if message.Text == "" {
+	if message == nil {
 		return &BotError{
 			Code:    http.StatusBadRequest,
 			Message: "Empty message received",
@@ -223,10 +224,7 @@ func (b *Bot) handleMessageUpdate(message *models.Message) error {
 		if handler, ok := b.commandHandler[command[1]]; ok {
 			b.logger.Info("Executing command: %s", command[1])
 
-			err := b.safeExecute(ctx, handler)
-			if err != nil {
-				return err
-			}
+			return b.safeExecute(ctx, handler)
 		} else {
 			return &BotError{
 				Code:    http.StatusNotFound,
@@ -235,15 +233,54 @@ func (b *Bot) handleMessageUpdate(message *models.Message) error {
 			}
 		}
 
-	} else if b.messageHandler != nil {
-		if err := b.safeExecute(ctx, b.messageHandler); err != nil {
-			return err
+	}
+	switch {
+	case message.Text != "":
+		if handler, ok := b.messageHandlers["Text"]; ok {
+			return b.safeExecute(ctx, handler)
+		}
+	case message.Photo != nil:
+		if handler, ok := b.messageHandlers["Photo"]; ok {
+			ctx.Photo = message.Photo
+			return b.safeExecute(ctx, handler)
+		}
+	case message.Video != nil:
+		if handler, ok := b.messageHandlers["Video"]; ok {
+			ctx.Video = message.Video
+			return b.safeExecute(ctx, handler)
+		}
+	case message.Voice != nil:
+		if handler, ok := b.messageHandlers["Voice"]; ok {
+			ctx.Voice = message.Voice
+			return b.safeExecute(ctx, handler)
+		}
+	case message.Document != nil:
+		if handler, ok := b.messageHandlers["Document"]; ok {
+			ctx.Document = message.Document
+			return b.safeExecute(ctx, handler)
+		}
+	case message.Animation != nil:
+		if handler, ok := b.messageHandlers["Animation"]; ok {
+			ctx.Animation = message.Animation
+			return b.safeExecute(ctx, handler)
+		}
+	case message.Sticker != nil:
+		if handler, ok := b.messageHandlers["Sticker"]; ok {
+			ctx.Sticker = message.Sticker
+			return b.safeExecute(ctx, handler)
+		}
+	default:
+		return &BotError{
+			Code:    http.StatusBadRequest,
+			Message: "Unsupported message type received. No handler is available for this message type.",
+			Err:     fmt.Errorf("no handler found for message type: %v", message),
 		}
 	}
+
 	return nil
 }
 
-func (b *Bot) safeExecute(ctx *Context, handler handler) error {
+func (b *Bot) safeExecute(ctx *Context, handler Handler) error {
 	defer func() {
 		if r := recover(); r != nil {
 			b.logger.Error("Panic in handler execution:", r)
@@ -1392,4 +1429,9 @@ func (b *Bot) GetMyShortDescription(langagueCode string) (json.RawMessage, error
 	return makeAPIRequestWithResult(b.token, "getMyShortDescription", map[string]interface{}{
 		"language_code": langagueCode,
 	})
+}
+
+func (b *Bot) EditMessageText(req *EditMessageTextRequest) error {
+	builer := NewParamBuilder().Add("chat_id", req.ChatId).Add("message_id", req.MessageId)
+	return makeAPIRequest(b.token, "getMyShortDescription", builer.Build())
 }
