@@ -1,8 +1,6 @@
 package tgx
 
 import (
-	"fmt"
-
 	"github.com/harshyadavone/tgx/models"
 )
 
@@ -21,8 +19,11 @@ func (b *Bot) handleCallbackQuery(cb *models.CallbackQuery) error {
 	}
 
 	if handler, ok := b.callbackHandlers[cb.Data]; ok {
-		fmt.Println("Callback handler called")
-		handler(ctx)
+		ctx.bot.logger.Debug("callback handler called")
+		if err := handler(ctx); err != nil {
+			ctx.bot.logger.Error("error in calling handler %w: ", err)
+			return err
+		}
 	}
 
 	return nil
