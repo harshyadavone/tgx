@@ -193,6 +193,98 @@ func makeMultipartReq(token, method string, params map[string]interface{}, param
 	return nil
 }
 
+func makeMultipartMediaGroupReq(token, method string, mediaGroup *SendMediaGroupRequest, files []MediaFile) error {
+	url := fmt.Sprintf("https://api.telegram.org/bot%s/%s", token, method)
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	attachments := make(map[string]string)
+	for i, file := range files {
+		if file.FilePath != "" {
+			f, err := os.Open(file.FilePath)
+			if err != nil {
+				return fmt.Errorf("failed to open file %s: %w", file.FilePath, err)
+			}
+			defer f.Close()
+
+			attachmentKey := fmt.Sprintf("file%d", i)
+			attachments[attachmentKey] = filepath.Base(file.FilePath)
+
+			mediaGroup.Media[i].Media = "attach://" + attachmentKey
+
+			part, err := writer.CreateFormFile(attachmentKey, filepath.Base(file.FilePath))
+			if err != nil {
+				return fmt.Errorf("failed to create form file: %w", err)
+			}
+
+			if _, err := io.Copy(part, f); err != nil {
+				return fmt.Errorf("failed to copy file content: %w", err)
+			}
+		}
+	}
+
+	mediaBytes, err := json.Marshal(mediaGroup.Media)
+	if err != nil {
+		return fmt.Errorf("failed to marshal media group: %w", err)
+	}
+
+	fields := map[string]string{
+		"chat_id": fmt.Sprintf("%d", mediaGroup.ChatID),
+		"media":   string(mediaBytes),
+	}
+
+	if mediaGroup.DisableNotification {
+		fields["disable_notification"] = "true"
+	}
+
+	if mediaGroup.ProtectContent {
+		fields["protect_content"] = "true"
+	}
+
+	if mediaGroup.ReplyParams != nil {
+		replyBytes, err := json.Marshal(mediaGroup.ReplyParams)
+		if err != nil {
+			return fmt.Errorf("failed to marshal reply parameters: %w", err)
+		}
+		fields["reply_parameters"] = string(replyBytes)
+	}
+
+	for key, value := range fields {
+		if err := writer.WriteField(key, value); err != nil {
+			return fmt.Errorf("failed to write field %s: %w", key, err)
+		}
+	}
+
+	if err := writer.Close(); err != nil {
+		return fmt.Errorf("failed to close writer: %w", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, url, body)
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read response: %w", err)
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("unexpected status %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	return nil
+}
+
 func IsAPIError(err error, errCode int) bool {
 	if botErr, ok := err.(*BotError); ok {
 		if apiErr, ok := botErr.Err.(*APIError); ok {
