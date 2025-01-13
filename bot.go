@@ -510,7 +510,10 @@ func (b *Bot) SendPhoto(req *SendPhotoRequest) error {
 	builder := NewParamBuilder().
 		Add("chat_id", req.ChatId).
 		Add("caption", req.Caption).
-		Add("disable_notification", req.DisableNotification)
+		Add("photo", req.Photo).
+		Add("disable_notification", req.DisableNotification).
+		Add("show_caption_above_media", req.ShowCaptionAboveMedia).
+		Add("has_spoiler", req.HasSpoiler)
 
 	if req.ReplyParams != nil {
 		builder.Add("reply_to_message_id", req.ReplyParams.MessageId)
