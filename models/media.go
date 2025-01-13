@@ -20,7 +20,7 @@ type Audio struct {
 	Performer    string `json:"performer"`
 	Title        string `json:"title"`
 	FileName     string `json:"file_name"`
-	MimeType     int64  `json:"mime_type"`
+	MimeType     string `json:"mime_type"`
 	FileSize     int64  `json:"file_size"`
 }
 
@@ -28,7 +28,7 @@ type Document struct {
 	FileId       string `json:"file_id"`
 	FileUniqueId string `json:"file_unique_id"`
 	FileName     string `json:"file_name"`
-	MimeType     int64  `json:"mime_type"`
+	MimeType     string `json:"mime_type"`
 	FileSize     int64  `json:"file_size"`
 }
 
@@ -61,7 +61,7 @@ type Video struct {
 	Height       int64  `json:"height"`
 	Duration     int64  `json:"duration"`
 	FileName     string `json:"file_name"`
-	MimeType     int64  `json:"mime_type"`
+	MimeType     string `json:"mime_type"`
 	FileSize     int64  `json:"file_size"`
 }
 
@@ -77,6 +77,6 @@ type Voice struct {
 	FileId       string `json:"file_id"`
 	FileUniqueId string `json:"file_unique_id"`
 	Duration     int64  `json:"duration"`
-	MimeType     int64  `json:"mime_type"`
+	MimeType     string `json:"mime_type"`
 	FileSize     int64  `json:"file_size"`
 }
