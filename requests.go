@@ -123,6 +123,12 @@ type SendVideoNoteRequest struct {
 	Length    int64  `json:"length,omitempty"`   // Optional
 }
 
+type SendStickerRequest struct {
+	BaseMediaRequest
+	Sticker string `json:"sticker"`
+	Emoji   string `json:"emoji,omitempty"` // only for uploaded stickers
+}
+
 // MediaFile represents a file to be sent in a media group
 type MediaFile struct {
 	ParamName string // e.g., "photo", "video"

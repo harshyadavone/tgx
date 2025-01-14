@@ -10,6 +10,8 @@ type Context struct {
 	Document  *models.Document
 	Sticker   *models.Sticker
 	Animation *models.Animation
+	Audio     *models.Audio
+	VideoNote *models.VideoNote
 	Args      []string
 	UserID    int64
 	Username  string

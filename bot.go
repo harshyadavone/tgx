@@ -269,6 +269,16 @@ func (b *Bot) handleMessageUpdate(message *models.Message) error {
 			ctx.Sticker = message.Sticker
 			return b.safeExecute(ctx, handler)
 		}
+	case message.Audio != nil:
+		if handler, ok := b.messageHandlers["Audio"]; ok {
+			ctx.Audio = message.Audio
+			return b.safeExecute(ctx, handler)
+		}
+	case message.VideoNote != nil:
+		if handler, ok := b.messageHandlers["VideoNote"]; ok {
+			ctx.VideoNote = message.VideoNote
+			return b.safeExecute(ctx, handler)
+		}
 	default:
 		return &BotError{
 			Code:    http.StatusBadRequest,
@@ -876,6 +886,52 @@ func (b *Bot) SendVideoNoteFile(req *SendVideoNoteRequest) error {
 	params := builder.Build()
 	b.logger.Debug("Sending video note request")
 	return makeMultipartReq(b.token, "sendVideoNote", params, "video_note", req.VideoNote)
+}
+
+// SendSticker sends a sticker using file ID or URL
+func (b *Bot) SendSticker(req *SendStickerRequest) error {
+	builder := NewParamBuilder().
+		Add("chat_id", req.ChatId).
+		Add("sticker", req.Sticker).
+		Add("disable_notification", req.DisableNotification).
+		Add("protect_content", req.ProtectContent)
+
+	if req.ReplyParams != nil {
+		builder.Add("reply_to_message_id", req.ReplyParams.MessageId)
+	}
+	if req.ReplyMarkup != nil {
+		replyBytes, _ := json.Marshal(req.ReplyMarkup)
+		builder.Add("reply_markup", string(replyBytes))
+	}
+	params := builder.Build()
+	return makeAPIRequest(b.token, "sendSticker", params)
+}
+
+// SendStickerFile sends a sticker using a local file path
+func (b *Bot) SendStickerFile(req *SendStickerRequest) error {
+	b.logger.Debug("Preparing to send sticker")
+	if req.Sticker == "" {
+		b.logger.Error("Sticker is nil in SendStickerFile request")
+		return &BotError{
+			Message: "sticker can't be nil",
+		}
+	}
+
+	builder := NewParamBuilder().
+		Add("chat_id", req.ChatId).
+		Add("disable_notification", req.DisableNotification).
+		Add("protect_content", req.ProtectContent)
+
+	if req.ReplyParams != nil {
+		builder.Add("reply_to_message_id", req.ReplyParams.MessageId)
+	}
+	if req.ReplyMarkup != nil {
+		replyBytes, _ := json.Marshal(req.ReplyMarkup)
+		builder.Add("reply_markup", string(replyBytes))
+	}
+	params := builder.Build()
+	b.logger.Debug("Sending sticker request")
+	return makeMultipartReq(b.token, "sendSticker", params, "sticker", req.Sticker)
 }
 
 // SendMediaGroup
