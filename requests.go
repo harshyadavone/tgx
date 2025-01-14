@@ -227,3 +227,16 @@ type BotCommand struct {
 	Command     string `json:"command"`
 	Description string `json:"description"`
 }
+
+type CallbackAnswerOptions struct {
+	Text      string `json:"text,omitempty"`
+	ShowAlert bool   `json:"show_alert,omitempty"`
+	URL       string `json:"url,omitempty"`
+	CacheTime int    `json:"cache_time,omitempty"`
+}
+
+type EditMessageOptions struct {
+	ParseMode             string                       `json:"parse_mode,omitempty"`
+	DisableWebPagePreview bool                         `json:"disable_web_page_preview,omitempty"`
+	ReplyMarkup           *models.InlineKeyboardMarkup `json:"reply_markup,omitempty"`
+}
